@@ -1,91 +1,57 @@
-"""
-Simple Task Manager (BEFORE refactor)
 
-Run it:
-    python task_manager.py
-
-GOAL: 
-
-- Split responsibilities into clean functions/modules
-- Add type hints
-- Replace the raw dicts with dataclasses
-- Add proper, meaningful error handling
-- Add linting/formatting (black, ruff/flake8)
-- Add tests
-- Organize it into a proper project structure (src/, tests/, etc.)
-
-Modifying only how it's built, not what works for the user
-"""
-
-tasks = []
+from src.models import Priority, Task
 
 
-def add_task(title, priority, done=False):
-    task = {}
-    task["title"] = title
-    task["priority"] = priority
-    task["done"] = done
-    tasks.append(task)
-    print("added task:", title)
+class TaskNotFoundError(Exception):
+    """Raised when a task with the given title does not exist."""
 
 
-def remove_task(title):
-    global tasks
-    new_tasks = []
-    found = False
-    for t in tasks:
-        if t["title"] == title:
-            found = True
-            continue
-        new_tasks.append(t)
-    tasks = new_tasks
-    if not found:
-        print("couldn't find that task")
+class TaskManager:
+    """Keeps track of a list of tasks and the operations on them."""
 
+    def __init__(self) -> None:
+        self._tasks: list[Task] = []
 
-def complete_task(title):
-    for t in tasks:
-        if t["title"] == title:
-            t["done"] = True
+    def add_task(self, title: str, priority: Priority, done: bool = False) -> Task:
+        if not title.strip():
+            raise ValueError("Task title cannot be empty.")
+        task = Task(title=title, priority=priority, done=done)
+        self._tasks.append(task)
+        return task
+
+    def remove_task(self, title: str) -> None:
+        for index, task in enumerate(self._tasks):
+            if task.title == title:
+                del self._tasks[index]
+                return
+        raise TaskNotFoundError(f"No task named {title!r} found.")
+
+    def complete_task(self, title: str) -> Task:
+        for task in self._tasks:
+            if task.title == title:
+                task.done = True
+                return task
+        raise TaskNotFoundError(f"No task named {title!r} found.")
+
+    def list_tasks(self, priority: Priority | None = None) -> list[Task]:
+        if priority is None:
+            return list(self._tasks)
+        return [task for task in self._tasks if task.priority == priority]
+
+    def load_from_string(self, data: str) -> None:
+        """Bulk-load tasks from a string like 'title,priority,done;title2,...'."""
+        if not data.strip():
             return
-    print("no task with that name")
-
-
-def show_tasks(filter_priority=None):
-    for t in tasks:
-        if filter_priority != None:
-            if t["priority"] != filter_priority:
-                continue
-        status = "done" if t["done"] else "pending"
-        print(t["title"], "-", t["priority"], "-", status)
-
-
-def load_from_string(data):
-    # data looks like: "title,priority,done;title2,priority2,done2"
-    try:
-        entries = data.split(";")
-        for e in entries:
-            parts = e.split(",")
-            title = parts[0]
-            priority = parts[1]
-            done = True if parts[2] == "True" else False
-            add_task(title, priority, done)
-    except:
-        print("something went wrong loading data")
-
-
-def main():
-    load_from_string("Write report,high,False;Email client,medium,True;Fix bug,high,False")
-    add_task("Buy groceries", "low")
-    complete_task("Buy groceries")
-    remove_task("Email client")
-
-    print("\nAll tasks:")
-    show_tasks()
-
-    print("\nHigh priority tasks:")
-    show_tasks("high")
-
-
-if __name__ == "__main__":
-    main()
+        for entry in data.split(";"):
+            parts = entry.split(",")
+            if len(parts) != 3:
+                raise ValueError(f"Malformed task entry: {entry!r}")
+            title, priority_str, done_str = parts
+            try:
+                priority = Priority(priority_str.strip().lower())
+            except ValueError as exc:
+                raise ValueError(
+                    f"Unknown priority {priority_str!r} in entry {entry!r}"
+                ) from exc
+            done = done_str.strip().lower() == "true"
+            self.add_task(title.strip(), priority, done)
