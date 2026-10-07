@@ -5,9 +5,9 @@ working together.
  
 from collections.abc import Callable
  
-from src.decorators import retry, timed
-from src.processor import process_readings, running_average
-from src.resource_manager import managed_resource
+from decorators import retry, timed
+from processor import process_readings, running_average
+from resource_manager import managed_resource
  
 SAMPLE_DATA = [
     "08:00,21.5",
