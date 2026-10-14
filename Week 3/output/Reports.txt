@@ -1,0 +1,8 @@
+Netflix Titles Toolkit - Report
+Input file   : netflix_titles.csv
+Rows read    : 8807
+Clean rows   : 8800
+Invalid rows : 7
+Why rows were rejected:
+  Invalid rating: 3
+  Missing required field: 4
